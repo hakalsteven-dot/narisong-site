@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Demos · 那日松</title>
+<meta name="description" content="三个可交互的 AI 产品演示：截图转代码、短视频分镜流水线、Prompt 模式库。" />
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 40 40'%3E%3Crect width='40' height='40' rx='10' fill='%2308090b'/%3E%3Cpath d='M13 28V12l14 16V12' stroke='%23f4f2ee' stroke-width='2' fill='none'/%3E%3C/svg%3E" />
+<style>
+*{box-sizing:border-box}
+:root{
+  --bg:#08090b;--fg:#f4f2ee;--muted:rgba(244,242,238,.58);--line:rgba(255,255,255,.14);
+  --font:"SF Pro Display","SF Pro","Helvetica Neue",-apple-system,BlinkMacSystemFont,"PingFang SC","Hiragino Sans GB","Microsoft YaHei",Arial,sans-serif;
+  --mono:"SF Mono",ui-monospace,"Roboto Mono",Menlo,monospace;
+}
+html,body{margin:0;min-height:100%}
+body{background:var(--bg);color:var(--fg);font-family:var(--font);-webkit-font-smoothing:antialiased;
+  padding:34px 26px 60px}
+body::before{content:'';position:fixed;inset:0;pointer-events:none;z-index:0;
+  background:radial-gradient(60% 45% at 14% 0%,rgba(123,92,255,.16),transparent 62%),
+             radial-gradient(45% 38% at 88% 4%,rgba(255,122,61,.12),transparent 66%),
+             radial-gradient(45% 40% at 50% 100%,rgba(61,220,151,.08),transparent 70%)}
+.wrap{position:relative;z-index:1;max-width:1140px;margin:0 auto}
+a.home{display:inline-flex;align-items:center;gap:6px;color:var(--muted);text-decoration:none;font-size:13px;
+  padding:7px 13px;border:1px solid var(--line);border-radius:999px;transition:.25s}
+a.home:hover{color:#fff;border-color:rgba(255,255,255,.4)}
+h1{margin:26px 0 8px;font-size:clamp(30px,4vw,44px);font-weight:600;letter-spacing:-.01em;line-height:1.1}
+.lead{margin:0 0 6px;font-size:14px;color:var(--muted);line-height:1.75;max-width:64ch}
+.badge{display:inline-flex;align-items:center;gap:7px;margin-top:16px;font-family:var(--mono);font-size:11px;
+  letter-spacing:.06em;color:var(--muted);padding:6px 12px;border:1px solid var(--line);border-radius:999px}
+.badge .dot{width:7px;height:7px;border-radius:50%;background:var(--muted)}
+.badge[data-state="live"] .dot{background:#3ddc97;box-shadow:0 0 0 3px rgba(61,220,151,.16)}
+.badge[data-state="mock"] .dot{background:#f5b942;box-shadow:0 0 0 3px rgba(245,185,66,.16)}
+.badge[data-state="off"] .dot{background:#ff6b6b;box-shadow:0 0 0 3px rgba(255,107,107,.14)}
+
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:16px;margin-top:34px}
+.card{display:flex;flex-direction:column;gap:12px;padding:22px;border:1px solid var(--line);border-radius:18px;
+  background:rgba(255,255,255,.03);text-decoration:none;color:inherit;transition:.3s;position:relative;overflow:hidden}
+.card:hover{transform:translateY(-3px);border-color:rgba(255,255,255,.3);background:rgba(255,255,255,.06)}
+.card::after{content:'';position:absolute;inset:auto -30% -60% auto;width:220px;height:220px;border-radius:50%;
+  background:var(--glow,rgba(123,92,255,.22));filter:blur(44px);opacity:.7;transition:.4s}
+.card:hover::after{opacity:1;transform:scale(1.15)}
+.card .num{font-family:var(--mono);font-size:10.5px;letter-spacing:.14em;color:var(--muted)}
+.card h2{margin:0;font-size:19px;font-weight:600;line-height:1.3}
+.card p{margin:0;font-size:13px;line-height:1.7;color:var(--muted)}
+.card .tags{display:flex;flex-wrap:wrap;gap:5px;margin-top:auto;padding-top:6px}
+.card .tag{font-family:var(--mono);font-size:10px;padding:3px 8px;border-radius:6px;
+  background:rgba(255,255,255,.06);border:1px solid var(--line);color:var(--muted)}
+.card .go{display:flex;align-items:center;gap:6px;font-size:12.5px;color:var(--fg);margin-top:4px}
+.card .go span{transition:.3s}
+.card:hover .go span{transform:translateX(4px)}
+
+.foot{margin-top:36px;padding-top:20px;border-top:1px solid var(--line);font-size:12px;color:var(--muted);
+  line-height:1.8;font-family:var(--mono);letter-spacing:.02em}
+.foot code{background:rgba(255,255,255,.07);padding:2px 6px;border-radius:4px;font-size:11px}
+@media(max-width:600px){body{padding:24px 16px 44px}}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <a class="home" href="../index.html#work">← 回到作品集</a>
+
+  <h1>AI 演示</h1>
+  <p class="lead">
+    三个可直接上手的浏览器端工具。它们不是模型评分榜，而是把「模型能力」变成「具体动作」的三次尝试：
+    看清一个界面要做什么、把一个主题变成可开拍的镜头、把反复用到的要求沉淀成可复用的模式。
+  </p>
+
+  <div class="badge" id="badge" data-state="off"><span class="dot"></span><span id="badge-text">检查后端连接…</span></div>
+
+  <div class="grid">
+    <a class="card" href="screenshot-to-code.html" style="--glow:rgba(123,92,255,.24)">
+      <span class="num">01 / 视觉</span>
+      <h2>截图转代码</h2>
+      <p>上传一张 UI 截图或直接粘贴，生成可运行的单文件 HTML / Tailwind。支持实时预览与导出。</p>
+      <div class="tags"><span class="tag">视觉模型</span><span class="tag">沙箱预览</span><span class="tag">导出 .html</span></div>
+      <div class="go">打开 <span>→</span></div>
+    </a>
+
+    <a class="card" href="short-video.html" style="--glow:rgba(255,122,61,.24)">
+      <span class="num">02 / 内容</span>
+      <h2>短视频分镜流水线</h2>
+      <p>给一个主题，得到前三秒钩子、标题候选、逐镜画面与字幕、素材关键词，以及可发布文案。</p>
+      <div class="tags"><span class="tag">结构化 JSON</span><span class="tag">时间轴</span><span class="tag">导出 JSON / CSV</span></div>
+      <div class="go">打开 <span>→</span></div>
+    </a>
+
+    <a class="card" href="patterns.html" style="--glow:rgba(61,220,151,.2)">
+      <span class="num">03 / 方法</span>
+      <h2>Prompt 模式库</h2>
+      <p>十个可直接用的提示词骨架，支持改模板、加变量、存自定义模式，并可导入导出。</p>
+      <div class="tags"><span class="tag">模板变量</span><span class="tag">本地存储</span><span class="tag">导入 / 导出</span></div>
+      <div class="go">打开 <span>→</span></div>
+    </a>
+  </div>
+
+  <div class="foot">
+    这些页面需要同源的轻量后端来转发模型请求（API Key 只存在服务端）。<br>
+    本地运行：<code>node server.js</code>；无 Key 预览：<code>MOCK_AI=1 node server.js</code><br><br>
+    另外还有一个原生 macOS 应用：<a href="verbatim-voice.html" style="color:#f0a8a2;text-decoration:none;border-bottom:1px solid rgba(232,118,109,.4)">Verbatim 语音输入</a>
+    —— 逐字输出，别名需第二引擎互证。Swift 实现，不依赖本站后端。
+  </div>
+</div>
+
+<script>
+(async () => {
+  const badge = document.getElementById('badge');
+  const text = document.getElementById('badge-text');
+  try {
+    const res = await fetch('/api/health', { cache: 'no-store' });
+    if (!res.ok) throw new Error('bad');
+    const data = await res.json();
+    if (data.mock) {
+      badge.dataset.state = 'mock';
+      text.textContent = '演示模式 · 未配置 API Key，返回内置示例';
+    } else if (data.key) {
+      badge.dataset.state = 'live';
+      text.textContent = '已连接 · 使用免费模型';
+    } else {
+      badge.dataset.state = 'off';
+      text.textContent = '后端已启动，但缺少 API Key';
+    }
+  } catch {
+    badge.dataset.state = 'off';
+    text.textContent = '未连接后端 · 请先运行 node server.js';
+  }
+})();
+</script>
+</body>
+</html>

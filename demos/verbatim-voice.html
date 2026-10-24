@@ -1,0 +1,269 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Verbatim 语音输入 · 那日松</title>
+<meta name="description" content="Verbatim：macOS 菜单栏语音输入。默认逐字输出，改多少由你决定。开源，Swift 实现。" />
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 40 40'%3E%3Crect width='40' height='40' rx='10' fill='%2308090b'/%3E%3Cpath d='M13 28V12l14 16V12' stroke='%23f4f2ee' stroke-width='2' fill='none'/%3E%3C/svg%3E" />
+<style>
+*{box-sizing:border-box}
+:root{
+  --canvas:#08090a;--raised:#131415;--sunken:#1c1d1e;
+  --fg:#f4f5f7;--fg2:#9d9ea0;--fg3:#7f8082;
+  --line:#262628;--line-strong:#474849;
+  --rec:#e8766d;--ok:#5fd39a;--warn:#e8b95f;
+  --font:"SF Pro Text","SF Pro","Helvetica Neue",-apple-system,BlinkMacSystemFont,"PingFang SC","Hiragino Sans GB","Microsoft YaHei",Arial,sans-serif;
+  --mono:"SF Mono",ui-monospace,"Roboto Mono",Menlo,monospace;
+}
+html,body{margin:0}
+body{background:var(--canvas);color:var(--fg);font-family:var(--font);font-size:14px;line-height:1.68;
+  -webkit-font-smoothing:antialiased;padding:32px 24px 72px}
+body::before{content:'';position:fixed;inset:0;pointer-events:none;z-index:0;
+  background:radial-gradient(58% 38% at 50% -8%,rgba(232,118,109,.09),transparent 64%)}
+.wrap{position:relative;z-index:1;max-width:780px;margin:0 auto}
+
+a{color:inherit}
+.back{display:inline-flex;align-items:center;gap:6px;color:var(--fg2);text-decoration:none;font-size:12.5px;
+  padding:6px 12px;border:1px solid var(--line);border-radius:999px;transition:.2s}
+.back:hover{color:var(--fg);border-color:var(--line-strong)}
+
+.hero{margin:34px 0 0}
+.eyebrow{display:flex;align-items:center;gap:9px;font-family:var(--mono);font-size:10.5px;
+  letter-spacing:.13em;text-transform:uppercase;color:var(--fg3)}
+.eyebrow::before{content:'';width:24px;height:1px;background:var(--line-strong)}
+h1{margin:14px 0 0;font-size:clamp(38px,6.4vw,60px);font-weight:600;letter-spacing:-.022em;line-height:1.04}
+.sub{margin:14px 0 0;font-size:clamp(15px,1.9vw,18px);color:var(--fg2);max-width:34em;line-height:1.62}
+.sub b{color:var(--fg);font-weight:600}
+
+.pills{display:flex;flex-wrap:wrap;gap:7px;margin-top:20px}
+.pill{font-family:var(--mono);font-size:10.5px;letter-spacing:.04em;padding:5px 11px;border-radius:999px;
+  border:1px solid var(--line);color:var(--fg2);background:rgba(255,255,255,.025)}
+.pill.accent{border-color:rgba(232,118,109,.34);color:#f0a8a2;background:rgba(232,118,109,.09)}
+
+.cta-row{display:flex;flex-wrap:wrap;gap:10px;margin-top:26px}
+.cta{display:inline-flex;align-items:center;gap:8px;padding:11px 20px;border-radius:999px;text-decoration:none;
+  font-size:13.5px;font-weight:500;transition:.22s;border:1px solid transparent}
+.cta-primary{background:var(--fg);color:#0a0a0a}
+.cta-primary:hover{background:#fff;transform:translateY(-1px)}
+.cta-ghost{border-color:var(--line);color:var(--fg)}
+.cta-ghost:hover{border-color:var(--line-strong);background:rgba(255,255,255,.04)}
+.cta svg{width:13px;height:13px}
+
+.strip{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-top:34px}
+.step{border:1px solid var(--line);border-radius:14px;padding:14px 15px;background:var(--raised)}
+.step .n{font-family:var(--mono);font-size:9.5px;letter-spacing:.12em;color:var(--fg3)}
+.step .t{margin-top:7px;font-size:13px;font-weight:600}
+.step .d{margin-top:4px;font-size:11.5px;line-height:1.6;color:var(--fg3)}
+
+section{margin-top:46px}
+h2{margin:0 0 4px;font-size:12px;font-family:var(--mono);letter-spacing:.14em;text-transform:uppercase;
+  color:var(--fg3);font-weight:500}
+.lead{margin:10px 0 0;color:var(--fg2);font-size:13.5px;line-height:1.72;max-width:38em}
+
+.cards{display:grid;gap:12px;margin-top:18px}
+.card{border:1px solid var(--line);border-radius:14px;padding:18px;background:var(--raised)}
+.card h3{margin:0 0 6px;font-size:14.5px;font-weight:600;letter-spacing:-.005em}
+.card p{margin:0;font-size:13px;line-height:1.7;color:var(--fg2)}
+.card p + p{margin-top:9px}
+.card .tagline{font-family:var(--mono);font-size:10px;letter-spacing:.1em;text-transform:uppercase;
+  color:var(--fg3);margin-bottom:8px}
+
+table{width:100%;border-collapse:collapse;margin-top:16px;font-size:12.5px}
+th{text-align:left;font-family:var(--mono);font-size:9.5px;letter-spacing:.1em;text-transform:uppercase;
+  color:var(--fg3);font-weight:500;padding:0 0 9px;border-bottom:1px solid var(--line)}
+td{padding:9px 0;border-bottom:1px solid var(--line);color:var(--fg2);vertical-align:top}
+td:first-child{color:var(--fg);width:38%}
+tr:last-child td{border-bottom:0}
+.mono{font-family:var(--mono);font-size:11.5px;color:#f0a8a2}
+
+pre{margin:14px 0 0;padding:14px 16px;border:1px solid var(--line);border-radius:10px;background:var(--sunken);
+  font-family:var(--mono);font-size:12px;line-height:1.75;color:#d8d5cf;overflow-x:auto}
+pre .c{color:var(--fg3)}
+code{font-family:var(--mono);font-size:12px;background:rgba(255,255,255,.06);padding:1px 5px;border-radius:4px}
+
+.note{display:flex;gap:9px;margin-top:16px;padding:11px 13px;border-radius:10px;
+  border:1px solid rgba(232,185,95,.26);background:rgba(232,185,95,.07);font-size:12.5px;line-height:1.65;color:#e5cf9e}
+.note b{color:#f2ddb2;font-weight:600}
+
+footer{margin-top:52px;padding-top:20px;border-top:1px solid var(--line);
+  font-family:var(--mono);font-size:10.5px;line-height:1.9;color:var(--fg3);letter-spacing:.03em}
+
+@media(max-width:640px){
+  body{padding:22px 16px 52px}
+  .strip{grid-template-columns:1fr}
+  .hero{margin-top:26px}
+}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <a class="back" href="../index.html#work">← 作品集</a>
+
+  <div class="hero">
+    <div class="eyebrow">macOS · Swift · Open Source</div>
+    <h1>Verbatim</h1>
+    <p class="sub">
+      语音输入，<b>逐字为准</b>。按一下开始说，再按一下，文字直接插进光标处。<br>
+      默认不改写——重复、口头语、自我修正都留着。改多少，由你决定。
+    </p>
+
+    <div class="pills">
+      <span class="pill accent">逐字输出</span>
+      <span class="pill">菜单栏常驻</span>
+      <span class="pill">端上识别</span>
+      <span class="pill">Apache-2.0</span>
+      <span class="pill">macOS 13+ · Apple 芯片</span>
+    </div>
+
+    <div class="cta-row">
+      <a class="cta cta-primary" id="repo-link" href="https://github.com/hakalsteven-dot/verbatim-voice" target="_blank" rel="noopener">
+        <svg viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27s1.36.09 2 .27c1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.01 8.01 0 0 0 16 8c0-4.42-3.58-8-8-8Z"/></svg>
+        在 GitHub 查看源码
+      </a>
+      <a class="cta cta-ghost" href="#build">如何构建</a>
+    </div>
+
+    <div class="strip">
+      <div class="step">
+        <div class="n">01 / 说</div>
+        <div class="t">按一下右 Option</div>
+        <div class="d">菜单栏浮窗显示波形与状态，再说一次结束。</div>
+      </div>
+      <div class="step">
+        <div class="n">02 / 转</div>
+        <div class="t">端上识别</div>
+        <div class="d">默认不联网，音频不离开你的 Mac。</div>
+      </div>
+      <div class="step">
+        <div class="n">03 / 插</div>
+        <div class="t">原样进光标</div>
+        <div class="d">按宿主类型调整标点，不改你的用词。</div>
+      </div>
+    </div>
+  </div>
+
+  <section>
+    <h2>为什么是「逐字」</h2>
+    <p class="lead">
+      大多数语音输入会在你说完之后替你润色：删口头语、合并重复、把话改写成书面语。
+      这个动作很危险——改写意味着有人替你做判断，而你不知道它改掉了什么。
+      Verbatim 的默认行为是原样插入，所有调整都必须是你能看见、能关掉的具体规则。
+    </p>
+  </section>
+
+  <section>
+    <h2>三个核心机制</h2>
+    <div class="cards">
+      <div class="card">
+        <div class="tagline">01 · Alias corroboration</div>
+        <h3>别名互证：没有第二意见就不改</h3>
+        <p>
+          个人词库可以登记「常被听错成的写法」。但别名本身可能就是真词——
+          把 <code>skill</code> 登记成 <code>SKU</code> 的别名，用户真说「不是 SKU，是 skill」时，
+          无脑替换会把话说反。
+        </p>
+        <p>
+          所以规则是：<b>只有第二个独立引擎在同一位置听到正确写法时才改写</b>。没有第二引擎，一个别名都不改。
+          第二引擎通过本地 whisper 命令行接入。这不是缺功能，是刻意设计。
+        </p>
+      </div>
+
+      <div class="card">
+        <div class="tagline">02 · Context budget</div>
+        <h3>上下文预算：这次说话带哪些词</h3>
+        <p>引擎能接受的上下文条数有限，词库可能有几百条，不能全塞进去。排序不是先来先到：</p>
+        <table>
+          <tr><th>因子</th><th>权重</th></tr>
+          <tr><td>置顶</td><td class="mono">+1000</td></tr>
+          <tr><td>当前应用命中</td><td class="mono">+150</td></tr>
+          <tr><td>被纠正次数</td><td class="mono">+20 / 次，上限 +100</td></tr>
+          <tr><td>最近使用</td><td class="mono">+80 按天递减到 0</td></tr>
+          <tr><td>纠错被撤销（误判）</td><td class="mono">−100 / 次，上限 −400</td></tr>
+        </table>
+      </div>
+
+      <div class="card">
+        <div class="tagline">03 · Insert shaping</div>
+        <h3>插入整形：按宿主改标点</h3>
+        <table>
+          <tr><th>宿主</th><th>行为</th></tr>
+          <tr><td>聊天</td><td>去掉句末一个句号；省略号、版本号小数点不动</td></tr>
+          <tr><td>文档 / 代码</td><td>原样</td></tr>
+          <tr><td>终端</td><td>去掉末尾换行，不替你按回车</td></tr>
+        </table>
+        <p>英文之间自动补空格，但中文后面接英文不补。</p>
+      </div>
+    </div>
+  </section>
+
+  <section id="build">
+    <h2>构建与安装</h2>
+    <p class="lead">只需要 Command Line Tools，不需要完整 Xcode。</p>
+<pre><span class="c"># 拉源码</span>
+git clone https://github.com/hakalsteven-dot/verbatim-voice.git
+cd verbatim-voice
+
+<span class="c"># 跑核心逻辑测试（60 项断言）</span>
+./scripts/test.sh
+
+<span class="c"># 构建 / 构建并安装</span>
+./scripts/build-app.sh
+./scripts/build-app.sh --install</pre>
+
+    <p class="lead" style="margin-top:18px">首次运行需要在「系统设置 → 隐私与安全性」里授予三项权限：</p>
+    <table>
+      <tr><th>权限</th><th>用途</th></tr>
+      <tr><td>麦克风</td><td>录音</td></tr>
+      <tr><td>语音识别</td><td>把话转成文字</td></tr>
+      <tr><td>辅助功能</td><td>把文字插进其他应用的输入框</td></tr>
+    </table>
+
+    <div class="note">
+      <span>⚠︎</span>
+      <div>应用未经 Apple 公证，首次打开可能被 Gatekeeper 拦下。双击一次后到「隐私与安全性」点「仍要打开」，或运行
+        <code>xattr -dr com.apple.quarantine /Applications/Verbatim.app</code>。</div>
+    </div>
+  </section>
+
+  <section>
+    <h2>实现说明</h2>
+    <p class="lead">
+      逻辑与界面分离：<code>VerbatimCore</code> 不依赖 AppKit，所以核心规则能在命令行里跑测试。
+      插入用「写剪贴板 + 模拟 ⌘V」而不是逐字 AX 写入，兼容性更好，也不会打断输入法状态。
+    </p>
+<pre>├── Sources/VerbatimCore/    <span class="c">纯逻辑，无 UI 依赖</span>
+│   ├── TextJoinPolicy.swift
+│   ├── ContextBudgeter.swift
+│   ├── MisrecognitionNormalizer.swift
+│   ├── PersonalLexicon.swift
+│   └── DictationPipeline.swift
+├── Sources/Verbatim/        <span class="c">应用层：录音 / 识别 / 插入 / 热键</span>
+├── Tests/                   <span class="c">可移植断言 + XCTest 两套</span>
+└── scripts/                 <span class="c">build-app.sh / test.sh</span></pre>
+  </section>
+
+  <section>
+    <h2>与原项目的关系</h2>
+    <p class="lead">
+      本项目参考了
+      <a href="https://github.com/Towow-ai/totype" target="_blank" rel="noopener" style="color:#f0a8a2;text-decoration:none;border-bottom:1px solid rgba(232,118,109,.4)">Towow-ai/totype</a>
+      的产品判断（逐字优先、改多少由用户决定、别名需互证），代码为本项目重新编写：
+      逻辑层重写为可单测的纯函数并补了 60 项断言，插入规则与预算取值重新设计，界面用 SwiftUI 全新实现，
+      第二引擎只提供本地 whisper CLI 一种接入。
+    </p>
+  </section>
+
+  <footer>
+    Verbatim · Apache-2.0 · Swift + SwiftUI<br>
+    构建于 macOS，不依赖任何第三方框架
+  </footer>
+</div>
+
+<script>
+// GitHub 仓库地址集中在这里，换仓库只改这一行。
+const REPO_URL = 'https://github.com/hakalsteven-dot/verbatim-voice';
+document.getElementById('repo-link').href = REPO_URL;
+</script>
+</body>
+</html>
